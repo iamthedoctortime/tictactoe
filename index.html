@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Tic-Tac-Toe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .local-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.25rem;
+            background-color: #e5e7eb;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .local-board.active {
+            box-shadow: 0 0 0 4px #6366f1;
+            background-color: #d1d5db;
+        }
+
+        .local-board.won-x {
+            background-color: #fecaca;
+        }
+
+        .local-board.won-o {
+            background-color: #bfdbfe;
+        }
+
+        .cell {
+            background-color: #f9fafb;
+            width: 100%;
+            padding-top: 100%;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        .cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell.occupied {
+            cursor: not-allowed;
+        }
+
+        .symbol {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            line-height: 1;
+            font-weight: bold;
+        }
+
+        .symbol-x {
+            color: #ef4444;
+        }
+
+        .symbol-o {
+            color: #3b82f6;
+        }
+
+        .board-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 8rem;
+            font-weight: bold;
+            border-radius: 0.75rem;
+        }
+
+        .board-overlay.won-x {
+            color: #dc2626;
+        }
+
+        .board-overlay.won-o {
+            color: #2563eb;
+        }
+
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 1rem;
+            font-size: 1.5rem;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .message-box.show {
+            display: flex;
+        }
+
+        .new-game-btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .new-game-btn:hover {
+            background-color: #4338ca;
+        }
+
+        #status {
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="game-container">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">Super Tic-Tac-Toe</h1>
+        <div id="status" class="mb-4 text-center">X's turn.</div>
+        <div id="main-grid" class="main-grid"></div>
+        <button id="new-game-btn" class="new-game-btn mt-6">New Game</button>
+    </div>
+
+    <div id="message-box" class="message-box">
+        <span id="message-text"></span>
+        <button id="message-ok-btn" class="new-game-btn">OK</button>
+    </div>
+
+    <script>
+        const mainGrid = document.getElementById('main-grid');
+        const status = document.getElementById('status');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageOkBtn = document.getElementById('message-ok-btn');
+
+        let board = Array(9).fill(null).map(() => Array(9).fill(null));
+        let player = 'X';
+        let lastMove = null;
+        let activeBoard = null;
+        let bigBoard = Array(9).fill(null);
+        let gameOver = false;
+
+        const winningCombinations = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        function showMessage(text) {
+            messageText.textContent = text;
+            messageBox.classList.add('show');
+        }
+
+        function hideMessage() {
+            messageBox.classList.remove('show');
+        }
+
+        function checkWin(boardToCheck) {
+            for (let combo of winningCombinations) {
+                const [a, b, c] = combo;
+                if (boardToCheck[a] && boardToCheck[a] === boardToCheck[b] && boardToCheck[a] === boardToCheck[c]) {
+                    return boardToCheck[a];
+                }
+            }
+            return null;
+        }
+
+        function checkDraw(boardToCheck) {
+            return boardToCheck.every(cell => cell !== null);
+        }
+
+        function renderBoard() {
+            mainGrid.innerHTML = '';
+            for (let localIndex = 0; localIndex < 9; localIndex++) {
+                const localBoardElement = document.createElement('div');
+                localBoardElement.classList.add('local-board');
+                localBoardElement.dataset.index = localIndex;
+
+                if (bigBoard[localIndex]) {
+                    const symbol = bigBoard[localIndex];
+                    localBoardElement.classList.add(`won-${symbol.toLowerCase()}`);
+                    const overlay = document.createElement('div');
+                    overlay.classList.add('board-overlay', `won-${symbol.toLowerCase()}`);
+                    overlay.textContent = symbol;
+                    localBoardElement.appendChild(overlay);
+                }
+
+                if (activeBoard === null && !gameOver) {
+                    if (!bigBoard[localIndex]) {
+                        localBoardElement.classList.add('active');
+                    }
+                } else if (activeBoard !== null && activeBoard === localIndex && !gameOver) {
+                    localBoardElement.classList.add('active');
+                }
+
+                for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
+                    const cellElement = document.createElement('div');
+                    cellElement.classList.add('cell');
+                    cellElement.dataset.local = localIndex;
+                    cellElement.dataset.cell = cellIndex;
+
+                    if (board[localIndex][cellIndex]) {
+                        const symbol = document.createElement('span');
+                        symbol.classList.add('symbol', `symbol-${board[localIndex][cellIndex].toLowerCase()}`);
+                        symbol.textContent = board[localIndex][cellIndex];
+                        cellElement.classList.add('occupied');
+                        cellElement.appendChild(symbol);
+                    }
+
+                    if (activeBoard === null || activeBoard === localIndex) {
+                        if (!board[localIndex][cellIndex] && !bigBoard[localIndex]) {
+                            cellElement.addEventListener('click', handleMove);
+                        }
+                    } else {
+                        cellElement.classList.add('occupied');
+                    }
+
+                    localBoardElement.appendChild(cellElement);
+                }
+                mainGrid.appendChild(localBoardElement);
+            }
+        }
+
+        function handleMove(event) {
+            if (gameOver) return;
+
+            const cellElement = event.target.closest('.cell');
+            if (!cellElement) return;
+
+            const localBoardIndex = parseInt(cellElement.dataset.local);
+            const cellIndex = parseInt(cellElement.dataset.cell);
+
+            if (activeBoard !== null && activeBoard !== localBoardIndex) {
+                showMessage("You must play in the highlighted board.");
+                return;
+            }
+
+            if (board[localBoardIndex][cellIndex] || bigBoard[localBoardIndex]) {
+                return;
+            }
+
+            board[localBoardIndex][cellIndex] = player;
+            lastMove = { local: localBoardIndex, cell: cellIndex };
+            player = player === 'X' ? 'O' : 'X';
+
+            // Check for win/draw on the small board
+            const winner = checkWin(board[localBoardIndex]);
+            if (winner) {
+                bigBoard[localBoardIndex] = winner;
+            } else if (checkDraw(board[localBoardIndex])) {
+                bigBoard[localBoardIndex] = 'D'; // Draw
+            }
+
+            // Check for win/draw on the main board
+            const mainWinner = checkWin(bigBoard);
+            if (mainWinner) {
+                gameOver = true;
+                status.textContent = `${mainWinner} wins the game!`;
+                showMessage(`${mainWinner} wins the game!`);
+            } else if (checkDraw(bigBoard)) {
+                gameOver = true;
+                status.textContent = `It's a draw!`;
+                showMessage(`It's a draw!`);
+            }
+
+            // Determine the next active board
+            const nextActiveBoard = lastMove.cell;
+            if (bigBoard[nextActiveBoard]) {
+                activeBoard = null;
+                if (!gameOver) {
+                    status.textContent = `${player}'s turn. You can play anywhere.`;
+                }
+            } else {
+                activeBoard = nextActiveBoard;
+                if (!gameOver) {
+                    status.textContent = `${player}'s turn. Play in the highlighted board.`;
+                }
+            }
+
+            renderBoard();
+        }
+
+        function newGame() {
+            board = Array(9).fill(null).map(() => Array(9).fill(null));
+            player = 'X';
+            lastMove = null;
+            activeBoard = null;
+            bigBoard = Array(9).fill(null);
+            gameOver = false;
+            status.textContent = `X's turn.`;
+            renderBoard();
+            hideMessage();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBoard();
+            newGameBtn.addEventListener('click', newGame);
+            messageOkBtn.addEventListener('click', hideMessage);
+        });
+    </script>
+</body>
+
+</html>
