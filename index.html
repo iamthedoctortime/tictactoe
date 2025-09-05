@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Tic-Tac-Toe</title>
+    <title>Ultimate Tic-Tac-Toe</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #1a202c;
+            color: #e2e8f0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -20,349 +21,303 @@
         }
 
         .game-container {
-            background-color: #ffffff;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            max-width: 900px;
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            max-width: 600px;
+            text-align: center;
         }
 
-        .main-grid {
+        /* The overall game board (9 small boards) */
+        .macro-board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            width: 100%;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #2d3748;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-
-        .local-board {
+        
+        /* A single small tic-tac-toe board */
+        .micro-board {
+            position: relative;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.25rem;
-            background-color: #e5e7eb;
-            padding: 0.5rem;
-            border-radius: 0.75rem;
+            background-color: #4a5568;
+            border-radius: 0.5rem;
+            border: 2px solid #a0aec0;
             transition: all 0.3s ease;
         }
 
-        .local-board.active {
-            box-shadow: 0 0 0 4px #6366f1;
-            background-color: #d1d5db;
+        /* Highlight the active board where the next move must be played */
+        .micro-board.active {
+            border-color: #63b3ed;
+            box-shadow: 0 0 10px #63b3ed;
+            transform: scale(1.05);
         }
 
-        .local-board.won-x {
-            background-color: #fecaca;
+        /* Gray out boards that are not the active one */
+        .macro-board.constrained .micro-board:not(.active) {
+            opacity: 0.4;
         }
-
-        .local-board.won-o {
-            background-color: #bfdbfe;
-        }
-
+        
+        /* Style for the individual cells */
         .cell {
-            background-color: #f9fafb;
             width: 100%;
-            padding-top: 100%;
+            padding-top: 100%; /* Creates a square aspect ratio */
             position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border-radius: 0.5rem;
+            background-color: #2d3748;
             display: flex;
             justify-content: center;
             align-items: center;
-            user-select: none;
+            cursor: pointer;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        
+        .cell:hover {
+            background-color: #4a5568;
         }
 
-        .cell:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        .cell .content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: bold;
         }
 
         .cell.occupied {
             cursor: not-allowed;
         }
 
-        .symbol {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 3rem;
-            line-height: 1;
-            font-weight: bold;
-        }
-
-        .symbol-x {
-            color: #ef4444;
-        }
-
-        .symbol-o {
-            color: #3b82f6;
-        }
-
-        .board-overlay {
+        /* Final board winner overlay */
+        .macro-board .micro-board.winner::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 8rem;
-            font-weight: bold;
-            border-radius: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10;
         }
 
-        .board-overlay.won-x {
-            color: #dc2626;
-        }
-
-        .board-overlay.won-o {
-            color: #2563eb;
-        }
-
-        .message-box {
-            position: fixed;
+        /* Display winner 'X' or 'O' on the won board */
+        .macro-board .micro-board.winner .winner-symbol {
+            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1.5rem 2rem;
-            border-radius: 1rem;
-            font-size: 1.5rem;
-            text-align: center;
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-        }
-
-        .message-box.show {
-            display: flex;
-        }
-
-        .new-game-btn {
-            background-color: #4f46e5;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
+            font-size: 5rem;
             font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .new-game-btn:hover {
-            background-color: #4338ca;
-        }
-
-        #status {
-            margin-bottom: 1.5rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1f2937;
+            color: #fff;
+            z-index: 11;
         }
     </style>
 </head>
-
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
 
     <div class="game-container">
-        <h1 class="text-3xl font-bold mb-6 text-gray-800">Super Tic-Tac-Toe</h1>
-        <div id="status" class="mb-4 text-center">X's turn.</div>
-        <div id="main-grid" class="main-grid"></div>
-        <button id="new-game-btn" class="new-game-btn mt-6">New Game</button>
-    </div>
-
-    <div id="message-box" class="message-box">
-        <span id="message-text"></span>
-        <button id="message-ok-btn" class="new-game-btn">OK</button>
+        <h1 class="text-4xl sm:text-5xl font-bold text-center mb-4">Ultimate Tic-Tac-Toe</h1>
+        <div id="status" class="text-xl font-semibold mb-4 text-center text-blue-400">Player X's turn</div>
+        <div id="game-board" class="macro-board"></div>
+        <button id="reset-btn" class="mt-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full shadow-lg transition-transform duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Restart Game
+        </button>
     </div>
 
     <script>
-        const mainGrid = document.getElementById('main-grid');
-        const status = document.getElementById('status');
-        const newGameBtn = document.getElementById('new-game-btn');
-        const messageBox = document.getElementById('message-box');
-        const messageText = document.getElementById('message-text');
-        const messageOkBtn = document.getElementById('message-ok-btn');
+        const gameBoardEl = document.getElementById('game-board');
+        const statusEl = document.getElementById('status');
+        const resetBtn = document.getElementById('reset-btn');
 
-        let board = Array(9).fill(null).map(() => Array(9).fill(null));
-        let player = 'X';
-        let lastMove = null;
-        let activeBoard = null;
-        let bigBoard = Array(9).fill(null);
-        let gameOver = false;
+        // State variables
+        let board; // The main 9x9 grid, represented as a 3x3 array of 3x3 arrays
+        let localWins; // Tracks the winner of each of the 9 small boards
+        let currentPlayer; // 'X' or 'O'
+        let activeBoard; // The index of the board the next player must play in (0-8), or null for any board
+        let gameOver; // True if the game has been won or tied
 
-        const winningCombinations = [
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [0, 3, 6],
-            [1, 4, 7],
-            [2, 5, 8],
-            [0, 4, 8],
-            [2, 4, 6]
+        // Winning combinations for a 3x3 board
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]            // Diagonals
         ];
 
-        function showMessage(text) {
-            messageText.textContent = text;
-            messageBox.classList.add('show');
+        // Initializes the game state
+        function initGame() {
+            board = Array(9).fill(null).map(() => Array(9).fill(null));
+            localWins = Array(9).fill(null);
+            currentPlayer = 'X';
+            activeBoard = null;
+            gameOver = false;
+            updateStatus();
+            renderBoard();
         }
 
-        function hideMessage() {
-            messageBox.classList.remove('show');
-        }
-
-        function checkWin(boardToCheck) {
-            for (let combo of winningCombinations) {
-                const [a, b, c] = combo;
-                if (boardToCheck[a] && boardToCheck[a] === boardToCheck[b] && boardToCheck[a] === boardToCheck[c]) {
-                    return boardToCheck[a];
-                }
-            }
-            return null;
-        }
-
-        function checkDraw(boardToCheck) {
-            return boardToCheck.every(cell => cell !== null);
-        }
-
+        // Renders the entire game board from the current state
         function renderBoard() {
-            mainGrid.innerHTML = '';
-            for (let localIndex = 0; localIndex < 9; localIndex++) {
-                const localBoardElement = document.createElement('div');
-                localBoardElement.classList.add('local-board');
-                localBoardElement.dataset.index = localIndex;
+            gameBoardEl.innerHTML = ''; // Clear existing board
+            
+            // Add a class to dim inactive boards if a specific board is active
+            if (activeBoard !== null && localWins[activeBoard] === null) {
+                gameBoardEl.classList.add('constrained');
+            } else {
+                gameBoardEl.classList.remove('constrained');
+            }
 
-                if (bigBoard[localIndex]) {
-                    const symbol = bigBoard[localIndex];
-                    localBoardElement.classList.add(`won-${symbol.toLowerCase()}`);
-                    const overlay = document.createElement('div');
-                    overlay.classList.add('board-overlay', `won-${symbol.toLowerCase()}`);
-                    overlay.textContent = symbol;
-                    localBoardElement.appendChild(overlay);
+            // Loop through each of the 9 main boards
+            for (let i = 0; i < 9; i++) {
+                const microBoard = document.createElement('div');
+                microBoard.classList.add('micro-board');
+                microBoard.dataset.macroIndex = i;
+
+                // Highlight the active board
+                if (activeBoard !== null && i === activeBoard && localWins[activeBoard] === null) {
+                    microBoard.classList.add('active');
+                }
+                
+                // If a board has a winner, add the winner class and symbol
+                if (localWins[i] !== null) {
+                    microBoard.classList.add('winner');
+                    const winnerSymbol = document.createElement('div');
+                    winnerSymbol.classList.add('winner-symbol', localWins[i] === 'X' ? 'text-red-400' : 'text-green-400');
+                    winnerSymbol.textContent = localWins[i];
+                    microBoard.appendChild(winnerSymbol);
                 }
 
-                if (activeBoard === null && !gameOver) {
-                    if (!bigBoard[localIndex]) {
-                        localBoardElement.classList.add('active');
+                // Loop through each of the 9 cells in the micro board
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.microIndex = j;
+
+                    // If a cell is occupied, add the player's symbol
+                    if (board[i][j]) {
+                        cell.classList.add('occupied');
+                        const content = document.createElement('div');
+                        content.classList.add('content', board[i][j] === 'X' ? 'text-red-400' : 'text-green-400');
+                        content.textContent = board[i][j];
+                        cell.appendChild(content);
                     }
-                } else if (activeBoard !== null && activeBoard === localIndex && !gameOver) {
-                    localBoardElement.classList.add('active');
+                    
+                    microBoard.appendChild(cell);
                 }
-
-                for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
-                    const cellElement = document.createElement('div');
-                    cellElement.classList.add('cell');
-                    cellElement.dataset.local = localIndex;
-                    cellElement.dataset.cell = cellIndex;
-
-                    if (board[localIndex][cellIndex]) {
-                        const symbol = document.createElement('span');
-                        symbol.classList.add('symbol', `symbol-${board[localIndex][cellIndex].toLowerCase()}`);
-                        symbol.textContent = board[localIndex][cellIndex];
-                        cellElement.classList.add('occupied');
-                        cellElement.appendChild(symbol);
-                    }
-
-                    if (activeBoard === null || activeBoard === localIndex) {
-                        if (!board[localIndex][cellIndex] && !bigBoard[localIndex]) {
-                            cellElement.addEventListener('click', handleMove);
-                        }
-                    } else {
-                        cellElement.classList.add('occupied');
-                    }
-
-                    localBoardElement.appendChild(cellElement);
-                }
-                mainGrid.appendChild(localBoardElement);
+                gameBoardEl.appendChild(microBoard);
             }
         }
 
+        // Handles a player's move
         function handleMove(event) {
             if (gameOver) return;
 
-            const cellElement = event.target.closest('.cell');
-            if (!cellElement) return;
+            const cell = event.target.closest('.cell');
+            if (!cell) return;
 
-            const localBoardIndex = parseInt(cellElement.dataset.local);
-            const cellIndex = parseInt(cellElement.dataset.cell);
+            const microBoard = cell.parentElement;
+            const macroIndex = parseInt(microBoard.dataset.macroIndex);
+            const microIndex = parseInt(cell.dataset.microIndex);
 
-            if (activeBoard !== null && activeBoard !== localBoardIndex) {
-                showMessage("You must play in the highlighted board.");
-                return;
-            }
+            // Check if the move is valid based on the current game state
+            const isBoardActive = activeBoard === null || activeBoard === macroIndex;
+            const isBoardWon = localWins[macroIndex] !== null;
 
-            if (board[localBoardIndex][cellIndex] || bigBoard[localBoardIndex]) {
-                return;
-            }
+            if (isBoardActive && !isBoardWon && !board[macroIndex][microIndex]) {
+                // Place the player's move
+                board[macroIndex][microIndex] = currentPlayer;
 
-            board[localBoardIndex][cellIndex] = player;
-            lastMove = { local: localBoardIndex, cell: cellIndex };
-            player = player === 'X' ? 'O' : 'X';
-
-            // Check for win/draw on the small board
-            const winner = checkWin(board[localBoardIndex]);
-            if (winner) {
-                bigBoard[localBoardIndex] = winner;
-            } else if (checkDraw(board[localBoardIndex])) {
-                bigBoard[localBoardIndex] = 'D'; // Draw
-            }
-
-            // Check for win/draw on the main board
-            const mainWinner = checkWin(bigBoard);
-            if (mainWinner) {
-                gameOver = true;
-                status.textContent = `${mainWinner} wins the game!`;
-                showMessage(`${mainWinner} wins the game!`);
-            } else if (checkDraw(bigBoard)) {
-                gameOver = true;
-                status.textContent = `It's a draw!`;
-                showMessage(`It's a draw!`);
-            }
-
-            // Determine the next active board
-            const nextActiveBoard = lastMove.cell;
-            if (bigBoard[nextActiveBoard]) {
-                activeBoard = null;
-                if (!gameOver) {
-                    status.textContent = `${player}'s turn. You can play anywhere.`;
+                // Check for a win in the current local board
+                if (checkWin(board[macroIndex])) {
+                    localWins[macroIndex] = currentPlayer;
+                    checkGlobalWin();
                 }
+
+                // Check for a tie in the current local board
+                if (checkTie(board[macroIndex])) {
+                    localWins[macroIndex] = 'Tie';
+                }
+
+                // Switch player
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+                // Determine the next active board based on the last move's micro-index
+                const nextBoardIndex = microIndex;
+                if (localWins[nextBoardIndex] !== null) {
+                    // The dictated board is already won or a tie, so the next player can choose any board
+                    activeBoard = null;
+                } else {
+                    activeBoard = nextBoardIndex;
+                }
+
+                updateStatus();
+                renderBoard();
+            }
+        }
+
+        // Checks for a win on a given 3x3 board
+        function checkWin(currentBoard) {
+            for (const condition of winConditions) {
+                const [a, b, c] = condition;
+                if (currentBoard[a] && currentBoard[a] === currentBoard[b] && currentBoard[a] === currentBoard[c]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Checks for a win on the overall game board
+        function checkGlobalWin() {
+            for (const condition of winConditions) {
+                const [a, b, c] = condition;
+                if (localWins[a] && localWins[a] === localWins[b] && localWins[a] === localWins[c]) {
+                    gameOver = true;
+                    statusEl.textContent = `Player ${localWins[a]} wins the game!`;
+                    return true;
+                }
+            }
+            
+            // Check for a global tie if all local boards are won or tied
+            if (localWins.every(win => win !== null)) {
+                gameOver = true;
+                statusEl.textContent = "It's a global tie!";
+            }
+            return false;
+        }
+
+        // Checks for a tie on a given 3x3 board
+        function checkTie(currentBoard) {
+            return currentBoard.every(cell => cell !== null);
+        }
+
+        // Updates the status message for the user
+        function updateStatus() {
+            if (gameOver) return;
+            let message = `Player ${currentPlayer}'s turn.`;
+            if (activeBoard !== null) {
+                const boardNumber = activeBoard + 1;
+                message += ` You must play in board #${boardNumber}.`;
             } else {
-                activeBoard = nextActiveBoard;
-                if (!gameOver) {
-                    status.textContent = `${player}'s turn. Play in the highlighted board.`;
-                }
+                message += ` You can play in any empty board.`;
             }
-
-            renderBoard();
+            statusEl.textContent = message;
         }
 
-        function newGame() {
-            board = Array(9).fill(null).map(() => Array(9).fill(null));
-            player = 'X';
-            lastMove = null;
-            activeBoard = null;
-            bigBoard = Array(9).fill(null);
-            gameOver = false;
-            status.textContent = `X's turn.`;
-            renderBoard();
-            hideMessage();
-        }
+        // Event listeners
+        gameBoardEl.addEventListener('click', handleMove);
+        resetBtn.addEventListener('click', initGame);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderBoard();
-            newGameBtn.addEventListener('click', newGame);
-            messageOkBtn.addEventListener('click', hideMessage);
-        });
+        // Start the game when the page loads
+        window.onload = initGame;
     </script>
-</body>
 
+</body>
 </html>
